@@ -1,0 +1,45 @@
+{
+  "_note": "Converted from test_dd.csv \u2014 5 items",
+  "checklist": [
+    {
+      "item_number": 1,
+      "category": "Planning",
+      "name": "Check zoning",
+      "source": "Council website",
+      "risk_if_fail": "critical",
+      "notes": "Must check"
+    },
+    {
+      "item_number": 2,
+      "category": "Planning",
+      "name": "Heritage overlay",
+      "source": "State register",
+      "risk_if_fail": "high",
+      "notes": ""
+    },
+    {
+      "item_number": 3,
+      "category": "Hazards",
+      "name": "Flood risk",
+      "source": "Council maps",
+      "risk_if_fail": "critical",
+      "notes": "Important"
+    },
+    {
+      "item_number": 4,
+      "category": "Hazards",
+      "name": "Bushfire",
+      "source": "RFS maps",
+      "risk_if_fail": "high",
+      "notes": ""
+    },
+    {
+      "item_number": 5,
+      "category": "Title",
+      "name": "Title search",
+      "source": "Land titles",
+      "risk_if_fail": "critical",
+      "notes": "Costs money"
+    }
+  ]
+}

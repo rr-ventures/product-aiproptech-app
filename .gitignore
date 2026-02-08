@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Environment
+.env
+
+# Deal data (local only, never commit)
+deals/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block page_title %}Due Diligence — {{ deal.address }} — Property Ops{% endblock %}
+{% block title %}Due Diligence Copilot{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+  <a href="/">Deals</a> <span class="sep">›</span> <a href="/deals/{{ deal.id }}">{{ deal.address }}</a> <span class="sep">›</span> Due Diligence
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="alert alert-info">
+  <strong>How DD works:</strong> Provide your checklist → generate a Manus job prompt → run in Manus → upload results → compile report.
+  Use ChatGPT web search for any online lookups needed during the process.
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title">DD Checklist</span>
+    <span class="badge badge-default">{{ checklist|length }} items</span>
+  </div>
+  <div class="card-body">
+    {% if checklist|length <= 10 %}
+    <div class="alert alert-warning mb-2">
+      Using placeholder checklist. Replace <code>templates/dd_checklist_placeholder.json</code> with your full 100-step checklist.
+    </div>
+    {% endif %}
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Category</th><th>Item</th><th>Source</th><th>Risk</th></tr></thead>
+        <tbody>
+          {% for item in checklist %}
+          <tr>
+            <td>{{ item.item_number }}</td>
+            <td>{{ item.category }}</td>
+            <td>{{ item.name }}</td>
+            <td class="text-sm text-secondary">{{ item.source }}</td>
+            <td><span class="badge {% if item.risk_if_fail == 'critical' %}badge-dark{% elif item.risk_if_fail == 'high' %}badge-warning{% else %}badge-default{% endif %}">{{ item.risk_if_fail }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header"><span class="card-title">Generate Manus Job Prompt</span></div>
+  <div class="card-body">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">State</label>
+        <select class="form-select" id="ddState">
+          <option value="NSW">NSW</option><option value="VIC">VIC</option><option value="QLD">QLD</option>
+          <option value="SA">SA</option><option value="WA">WA</option><option value="TAS">TAS</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Council / LGA</label>
+        <input class="form-input" id="ddCouncil" placeholder="e.g. City of Sydney">
+      </div>
+    </div>
+    <button class="btn btn-primary mt-1" onclick="generateDDPrompt('{{ deal.id }}')">Generate Manus Prompt</button>
+  </div>
+</div>
+
+<div id="ddPromptResult" class="hidden">
+  <div class="card mb-3">
+    <div class="card-header">
+      <span class="card-title">Generated Prompt</span>
+      <button class="btn btn-secondary btn-sm" onclick="copyDDPrompt()">Copy to Clipboard</button>
+    </div>
+    <div class="card-body">
+      <textarea class="form-textarea" id="ddPromptText" style="min-height:200px; font-family:var(--font-mono); font-size:12px" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="card-title">Upload DD Results</span></div>
+  <div class="card-body">
+    <p class="section-desc">After running the DD in Manus (or manually), upload the results JSON here.</p>
+    <label class="btn btn-secondary" style="cursor:pointer">
+      Upload dd_results.json
+      <input type="file" accept=".json" style="display:none" onchange="uploadDDResults(this.files[0], '{{ deal.id }}')">
+    </label>
+  </div>
+</div>
+{% endblock %}

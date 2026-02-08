@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block page_title %}Deals — Property Ops{% endblock %}
+{% block title %}Deals{% endblock %}
+{% block actions %}
+  <button class="btn btn-primary" onclick="openModal('newDealModal')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Deal
+  </button>
+{% endblock %}
+
+{% block content %}
+{% if deals|length == 0 %}
+  <div class="empty-state">
+    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/></svg>
+    <div class="empty-title">No deals yet</div>
+    <div class="empty-desc">Create your first deal to start running CMA, feasibility, and other analyses.</div>
+    <button class="btn btn-primary" onclick="openModal('newDealModal')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Create First Deal
+    </button>
+  </div>
+{% else %}
+  <div class="deal-grid">
+    {% for d in deals %}
+    <a href="/deals/{{ d.id }}" class="card deal-card">
+      <div class="card-body">
+        <div class="deal-address">{{ d.address }}</div>
+        <div class="deal-meta">
+          Created {{ d.created_at[:10] }}
+          {% if d.photo_count > 0 %} · {{ d.photo_count }} photo{{ 's' if d.photo_count != 1 }} {% endif %}
+        </div>
+        <div class="deal-products">
+          {% if d.cma_status %}
+            <span class="badge {% if d.cma_status == 'approved' %}badge-success{% else %}badge-warning{% endif %}">CMA {{ d.cma_status }}</span>
+          {% else %}
+            <span class="badge badge-default">CMA</span>
+          {% endif %}
+          {% if d.dd_status %}
+            <span class="badge {% if d.dd_status == 'approved' %}badge-success{% else %}badge-warning{% endif %}">DD {{ d.dd_status }}</span>
+          {% else %}
+            <span class="badge badge-default">DD</span>
+          {% endif %}
+          {% if d.feasibility_status %}
+            <span class="badge {% if d.feasibility_status == 'approved' %}badge-success{% else %}badge-warning{% endif %}">Feasibility {{ d.feasibility_status }}</span>
+          {% else %}
+            <span class="badge badge-default">Feasibility</span>
+          {% endif %}
+          {% if d.reno_status %}
+            <span class="badge {% if d.reno_status == 'approved' %}badge-success{% else %}badge-warning{% endif %}">Reno {{ d.reno_status }}</span>
+          {% else %}
+            <span class="badge badge-default">Reno</span>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

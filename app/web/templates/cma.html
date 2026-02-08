@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block page_title %}CMA — {{ deal.address }} — Property Ops{% endblock %}
+{% block title %}CMA Engine{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+  <a href="/">Deals</a> <span class="sep">›</span> <a href="/deals/{{ deal.id }}">{{ deal.address }}</a> <span class="sep">›</span> CMA
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Wizard Steps -->
+<div class="wizard-steps" id="wizardSteps">
+  <div class="wizard-step active" data-step="1" onclick="goToStep(1)">
+    <span class="step-num">1</span> Photos &amp; Vision
+  </div>
+  <div class="wizard-step" data-step="2" onclick="goToStep(2)">
+    <span class="step-num">2</span> Comparable Sales
+  </div>
+  <div class="wizard-step" data-step="3" onclick="goToStep(3)">
+    <span class="step-num">3</span> Analysis
+  </div>
+  <div class="wizard-step" data-step="4" onclick="goToStep(4)">
+    <span class="step-num">4</span> Review &amp; Approve
+  </div>
+</div>
+
+<!-- ── STEP 1: Photos ───────────────────────────────── -->
+<div class="wizard-panel active" id="step1">
+  <div class="section">
+    <h3 class="section-title">Upload Listing Photos</h3>
+    <p class="section-desc">Photos are analysed by Gemini to extract property facts, condition, and finish level.</p>
+
+    <div class="dropzone" onclick="document.getElementById('cmaPhotoInput').click()"
+         ondragover="event.preventDefault(); this.classList.add('dragover')"
+         ondragleave="this.classList.remove('dragover')"
+         ondrop="handlePhotoDrop(event, '{{ deal.id }}')">
+      <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div class="dropzone-text"><strong>Click to upload</strong> or drag and drop photos</div>
+      <div class="dropzone-hint">JPG, PNG, WebP</div>
+      <input type="file" id="cmaPhotoInput" multiple accept="image/*" style="display:none" onchange="uploadPhotos(this.files, '{{ deal.id }}')">
+    </div>
+
+    <div class="photo-grid mt-2" id="photoGrid">
+      {% for p in photos %}
+      <div class="photo-thumb">
+        <img src="/api/deals/{{ deal.id }}/photos/{{ p }}" alt="Photo">
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="section mt-3">
+    <h3 class="section-title">Vision Extraction</h3>
+    <p class="section-desc">Run Gemini to extract structured property facts from the photos above.</p>
+    <button class="btn btn-primary" onclick="runVision('{{ deal.id }}')" id="visionBtn" {% if photos|length == 0 %}disabled{% endif %}>
+      Run Gemini Vision Extraction
+    </button>
+
+    <div id="visionResults" class="mt-2 {% if not vision %}hidden{% endif %}">
+      {% if vision %}
+      <div class="result-panel">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-label">Type</div><div class="stat-value" style="font-size:16px">{{ vision.property_type or '—' }}</div></div>
+          <div class="stat-card"><div class="stat-label">Beds</div><div class="stat-value">{{ vision.bedrooms or '—' }}</div></div>
+          <div class="stat-card"><div class="stat-label">Baths</div><div class="stat-value">{{ vision.bathrooms or '—' }}</div></div>
+          <div class="stat-card"><div class="stat-label">Cars</div><div class="stat-value">{{ vision.car_spaces or '—' }}</div></div>
+          <div class="stat-card"><div class="stat-label">Condition</div><div class="stat-value" style="font-size:16px">{{ vision.condition_overall or '—' }}</div></div>
+          <div class="stat-card"><div class="stat-label">Finish</div><div class="stat-value" style="font-size:16px">{{ vision.finish_level or '—' }}</div></div>
+        </div>
+        {% if vision.condition_notes %}
+        <div style="font-size:13px; color: var(--text-secondary); margin-top:8px">
+          <strong>Notes:</strong> {{ vision.condition_notes }}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="flex justify-between mt-3">
+    <div></div>
+    <button class="btn btn-primary" onclick="goToStep(2)">Next: Comparable Sales →</button>
+  </div>
+</div>
+
+<!-- ── STEP 2: Comps ────────────────────────────────── -->
+<div class="wizard-panel" id="step2">
+  <div class="section">
+    <h3 class="section-title">Add Comparable Sales</h3>
+    <p class="section-desc">Enter sold properties to compare against. Add manually, upload a spreadsheet (.xlsx/.csv), or a JSON file.</p>
+
+    <div class="flex gap-1 mb-2">
+      <button class="btn btn-primary btn-sm" onclick="addCompRow()">+ Add Comp</button>
+      <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+        Upload Spreadsheet
+        <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="uploadCompsSpreadsheet(this.files[0], '{{ deal.id }}')">
+      </label>
+      <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+        Upload JSON
+        <input type="file" accept=".json" style="display:none" onchange="uploadCompsFile(this.files[0], '{{ deal.id }}')">
+      </label>
+    </div>
+
+    <div id="compsList">
+      {% if comps %}
+        {% for c in comps %}
+        <div class="comp-entry" data-index="{{ loop.index0 }}">
+          <div class="comp-entry-header">
+            <span class="comp-entry-num">Comp #{{ loop.index }}</span>
+            <button class="btn btn-ghost btn-sm" onclick="this.closest('.comp-entry').remove()">Remove</button>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Address</label><input class="form-input comp-address" value="{{ c.address }}"></div>
+            <div class="form-group"><label class="form-label">Sold Price ($)</label><input class="form-input comp-price" type="number" value="{{ c.sold_price }}"></div>
+            <div class="form-group"><label class="form-label">Sold Date</label><input class="form-input comp-date" type="date" value="{{ c.sold_date }}"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Beds</label><input class="form-input comp-beds" type="number" value="{{ c.beds }}"></div>
+            <div class="form-group"><label class="form-label">Baths</label><input class="form-input comp-baths" type="number" value="{{ c.baths }}"></div>
+            <div class="form-group"><label class="form-label">Cars</label><input class="form-input comp-cars" type="number" value="{{ c.cars }}"></div>
+            <div class="form-group"><label class="form-label">Land (sqm)</label><input class="form-input comp-land" type="number" value="{{ c.land_sqm }}"></div>
+            <div class="form-group"><label class="form-label">Distance (km)</label><input class="form-input comp-dist" type="number" step="0.1" value="{{ c.distance_km }}"></div>
+          </div>
+          <div class="form-group"><label class="form-label">Condition Notes</label><input class="form-input comp-notes" value="{{ c.condition_notes|default('') }}"></div>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="flex justify-between mt-3">
+    <button class="btn btn-secondary" onclick="goToStep(1)">← Back</button>
+    <div class="flex gap-1">
+      <button class="btn btn-secondary" onclick="saveComps('{{ deal.id }}')">Save Comps</button>
+      <button class="btn btn-primary" onclick="saveComps('{{ deal.id }}'); goToStep(3)">Next: Run Analysis →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── STEP 3: Analysis ─────────────────────────────── -->
+<div class="wizard-panel" id="step3">
+  <div class="section">
+    <h3 class="section-title">Run CMA Analysis</h3>
+    <p class="section-desc">Claude will analyse the subject property against your comps, apply adjustments, and generate a value range.</p>
+
+    <button class="btn btn-primary btn-lg" onclick="runCMA('{{ deal.id }}')" id="cmaRunBtn">
+      Run CMA Analysis with Claude
+    </button>
+  </div>
+
+  <div id="cmaResults" class="{% if not cma_result %}hidden{% endif %} mt-3">
+    {% if cma_result %}
+      {% set val = cma_result.valuation if cma_result.valuation else {} %}
+      <!-- Value Result -->
+      <div class="stat-grid mb-3">
+        <div class="stat-card">
+          <div class="stat-label">Value Range</div>
+          <div class="stat-value">${{ "{:,.0f}".format(val.value_range_low|default(0)) }} – ${{ "{:,.0f}".format(val.value_range_high|default(0)) }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Point Estimate</div>
+          <div class="stat-value">${{ "{:,.0f}".format(val.point_estimate|default(0)) }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Confidence</div>
+          <div class="stat-value">{{ "%.0f"|format((val.confidence_score|default(0)) * 100) }}%</div>
+          <div class="stat-sub">{{ val.confidence_reasoning|default('')|truncate(60) }}</div>
+        </div>
+      </div>
+
+      <!-- Comps Table -->
+      {% if cma_result.comps_analysis %}
+      <div class="section-title">Comparable Sales Analysis</div>
+      <div class="table-wrap mt-1">
+        <table>
+          <thead>
+            <tr>
+              <th>Address</th>
+              <th>Sold Price</th>
+              <th>Tag</th>
+              <th>Adjusted Price</th>
+              <th>Weight</th>
+              <th>Reasoning</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in cma_result.comps_analysis %}
+            <tr>
+              <td>{{ c.address }}</td>
+              <td class="num">${{ "{:,.0f}".format(c.sold_price|default(0)) }}</td>
+              <td><span class="badge {% if c.similarity_tag == 'similar' %}badge-success{% elif c.similarity_tag == 'superior' %}badge-info{% else %}badge-warning{% endif %}">{{ c.similarity_tag }}</span></td>
+              <td class="num">${{ "{:,.0f}".format(c.adjusted_price|default(0)) }}</td>
+              <td class="num">{{ "%.0f"|format((c.weight|default(0)) * 100) }}%</td>
+              <td class="text-sm text-secondary">{{ c.similarity_reasoning|default('')|truncate(80) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if cma_result.market_commentary %}
+      <div class="result-panel mt-3">
+        <div class="result-label">Market Commentary</div>
+        <p style="font-size:13px; margin-top:8px; color:var(--text-secondary)">{{ cma_result.market_commentary }}</p>
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div class="flex justify-between mt-3">
+    <button class="btn btn-secondary" onclick="goToStep(2)">← Back</button>
+    <button class="btn btn-primary" onclick="goToStep(4)" {% if not cma_result %}disabled{% endif %} id="toReviewBtn">Next: Review →</button>
+  </div>
+</div>
+
+<!-- ── STEP 4: Review ───────────────────────────────── -->
+<div class="wizard-panel" id="step4">
+  <div class="section">
+    <h3 class="section-title">Review &amp; Approve</h3>
+    <p class="section-desc">Review the CMA results, download artifacts, and approve or keep as draft.</p>
+
+    <div class="flex gap-1 mb-3">
+      <a href="/api/deals/{{ deal.id }}/outputs/cma_report.xlsx" class="btn btn-secondary" download>📗 Download Spreadsheet</a>
+      <a href="/api/deals/{{ deal.id }}/outputs/cma_result.json" class="btn btn-secondary" download>📄 Download JSON</a>
+      <a href="/api/deals/{{ deal.id }}/outputs/cma_summary.md" class="btn btn-secondary" download>📝 Download Summary</a>
+    </div>
+  </div>
+
+  <div class="approve-bar">
+    <div class="approve-bar-text">
+      {% if deal.cma_status == 'approved' %}
+        ✅ This CMA has been approved.
+      {% else %}
+        ⚠️ Review all outputs before approving. This CMA is currently <strong>draft</strong>.
+      {% endif %}
+    </div>
+    <div class="flex gap-1">
+      <button class="btn btn-secondary" onclick="approveCMA('{{ deal.id }}', false)">Keep as Draft</button>
+      <button class="btn btn-primary" onclick="approveCMA('{{ deal.id }}', true)">✓ Approve CMA</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

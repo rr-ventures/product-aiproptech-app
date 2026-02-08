@@ -1,0 +1,37 @@
+{
+  "_note": "Default feasibility assumptions — edit these to match your standard deal parameters. All amounts in AUD.",
+  "acquisition_costs": {
+    "stamp_duty_rate_pct": 4.5,
+    "stamp_duty_notes": "Approximate rate; varies by state and price bracket. Default is NSW investor rate.",
+    "legal_conveyancing": 2500,
+    "building_pest_inspection": 800,
+    "other_acquisition": 0
+  },
+  "holding_costs_monthly": {
+    "finance_interest_rate_annual_pct": 6.5,
+    "finance_lvr_pct": 80,
+    "council_rates": 350,
+    "water_rates": 150,
+    "insurance": 250,
+    "land_tax_monthly": 0,
+    "utilities": 100,
+    "other_holding": 0
+  },
+  "renovation": {
+    "contingency_pct": 15,
+    "notes": "Reno budget is entered per deal. Contingency is applied on top."
+  },
+  "selling_costs": {
+    "agent_commission_pct": 2.0,
+    "marketing": 5000,
+    "legal_selling": 1500,
+    "styling": 3000,
+    "other_selling": 0
+  },
+  "deal_parameters": {
+    "default_hold_period_months": 6,
+    "target_profit_min": 50000,
+    "target_roi_min_pct": 15,
+    "target_margin_min_pct": 10
+  }
+}

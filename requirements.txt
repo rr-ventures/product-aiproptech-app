@@ -1,0 +1,13 @@
+# AU Property Ops Copilot - Dependencies
+anthropic>=0.39.0
+google-genai>=1.0.0
+openpyxl>=3.1.0
+rich>=13.7.0
+python-dotenv>=1.0.0
+Pillow>=10.0.0
+httpx>=0.27.0
+pydantic>=2.5.0
+fastapi>=0.115.0
+uvicorn>=0.32.0
+jinja2>=3.1.0
+python-multipart>=0.0.9

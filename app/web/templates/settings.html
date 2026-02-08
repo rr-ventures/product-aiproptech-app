@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% block page_title %}Settings — Property Ops{% endblock %}
+{% block title %}Settings & Templates{% endblock %}
+
+{% block content %}
+<p class="section-desc mb-3">Upload your spreadsheets here. The app will auto-detect the type and convert them to the JSON format it needs. Supports <strong>.xlsx</strong> and <strong>.csv</strong> files.</p>
+
+<!-- Upload Section -->
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title">Upload a Template Spreadsheet</span>
+  </div>
+  <div class="card-body">
+    <div class="dropzone" onclick="document.getElementById('templateInput').click()"
+         ondragover="event.preventDefault(); this.classList.add('dragover')"
+         ondragleave="this.classList.remove('dragover')"
+         ondrop="handleTemplateDrop(event)">
+      <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div class="dropzone-text"><strong>Click or drag</strong> your spreadsheet here</div>
+      <div class="dropzone-hint">.xlsx or .csv — DD checklist, feasibility template, stores list, or comps</div>
+      <input type="file" id="templateInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="uploadTemplate(this.files[0])">
+    </div>
+
+    <!-- Preview area (shown after upload) -->
+    <div id="previewArea" class="hidden mt-3">
+      <div class="alert alert-info" id="detectResult"></div>
+
+      <div class="form-group">
+        <label class="form-label">Template Type</label>
+        <select class="form-select" id="templateType">
+          <option value="dd_checklist">DD Checklist</option>
+          <option value="feasibility">Feasibility Template</option>
+          <option value="stores">Stores List</option>
+          <option value="comps">Comparable Sales (for a deal)</option>
+        </select>
+        <div class="form-hint">Auto-detected from your file. Change if incorrect.</div>
+      </div>
+
+      <!-- For comps, need to select a deal -->
+      <div class="form-group hidden" id="compsDealGroup">
+        <label class="form-label">Which deal?</label>
+        <select class="form-select" id="compsDealSelect">
+          {% for d in deals %}
+          <option value="{{ d.id }}">{{ d.address }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="previewTable" class="mt-2"></div>
+
+      <div class="flex gap-1 mt-2">
+        <button class="btn btn-primary" onclick="confirmConvert()">Convert & Save</button>
+        <button class="btn btn-secondary" onclick="cancelUpload()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Current Templates Status -->
+<div class="section-title">Current Templates</div>
+
+<div class="card mb-3">
+  <div class="product-row">
+    <div class="product-icon">📋</div>
+    <div class="product-info">
+      <div class="product-name">DD Checklist</div>
+      <div class="product-desc">{{ dd_count }} items loaded
+        {% if dd_count <= 10 %}<span class="badge badge-warning" style="margin-left:6px">Placeholder</span>{% else %}<span class="badge badge-success" style="margin-left:6px">Custom</span>{% endif %}
+      </div>
+    </div>
+    <div class="product-actions">
+      <a href="/api/templates/dd_checklist" class="btn btn-secondary btn-sm" download="dd_checklist.json">Download JSON</a>
+    </div>
+  </div>
+  <div class="product-row">
+    <div class="product-icon">💰</div>
+    <div class="product-info">
+      <div class="product-name">Feasibility Template</div>
+      <div class="product-desc">Cost assumptions & targets</div>
+    </div>
+    <div class="product-actions">
+      <a href="/api/templates/feasibility" class="btn btn-secondary btn-sm" download="feasibility_template.json">Download JSON</a>
+    </div>
+  </div>
+  <div class="product-row">
+    <div class="product-icon">🏪</div>
+    <div class="product-info">
+      <div class="product-name">Stores List</div>
+      <div class="product-desc">{{ stores_count }} stores loaded
+        {% if stores_placeholder %}<span class="badge badge-warning" style="margin-left:6px">Has placeholders</span>{% else %}<span class="badge badge-success" style="margin-left:6px">Custom</span>{% endif %}
+      </div>
+    </div>
+    <div class="product-actions">
+      <a href="/api/templates/stores" class="btn btn-secondary btn-sm" download="stores_list.json">Download JSON</a>
+    </div>
+  </div>
+</div>
+
+<!-- Feasibility Defaults Inline Editor -->
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title">Feasibility Defaults (Quick Edit)</span>
+    <button class="btn btn-primary btn-sm" onclick="saveFeasibilityDefaults()">Save Changes</button>
+  </div>
+  <div class="card-body">
+    <div class="section-title" style="font-size:12px">Acquisition Costs</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Stamp Duty Rate (%)</label>
+        <input class="form-input feas-field" data-key="acquisition_costs.stamp_duty_rate_pct" type="number" step="0.1" value="{{ feas.acquisition_costs.stamp_duty_rate_pct }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Legal / Conveyancing ($)</label>
+        <input class="form-input feas-field" data-key="acquisition_costs.legal_conveyancing" type="number" value="{{ feas.acquisition_costs.legal_conveyancing }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Building & Pest ($)</label>
+        <input class="form-input feas-field" data-key="acquisition_costs.building_pest_inspection" type="number" value="{{ feas.acquisition_costs.building_pest_inspection }}">
+      </div>
+    </div>
+
+    <div class="section-title mt-2" style="font-size:12px">Holding Costs (Monthly)</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Interest Rate (% p.a.)</label>
+        <input class="form-input feas-field" data-key="holding_costs_monthly.finance_interest_rate_annual_pct" type="number" step="0.1" value="{{ feas.holding_costs_monthly.finance_interest_rate_annual_pct }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">LVR (%)</label>
+        <input class="form-input feas-field" data-key="holding_costs_monthly.finance_lvr_pct" type="number" value="{{ feas.holding_costs_monthly.finance_lvr_pct }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Council Rates ($)</label>
+        <input class="form-input feas-field" data-key="holding_costs_monthly.council_rates" type="number" value="{{ feas.holding_costs_monthly.council_rates }}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Water ($)</label>
+        <input class="form-input feas-field" data-key="holding_costs_monthly.water_rates" type="number" value="{{ feas.holding_costs_monthly.water_rates }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Insurance ($)</label>
+        <input class="form-input feas-field" data-key="holding_costs_monthly.insurance" type="number" value="{{ feas.holding_costs_monthly.insurance }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Utilities ($)</label>
+        <input class="form-input feas-field" data-key="holding_costs_monthly.utilities" type="number" value="{{ feas.holding_costs_monthly.utilities }}">
+      </div>
+    </div>
+
+    <div class="section-title mt-2" style="font-size:12px">Selling Costs</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Agent Commission (%)</label>
+        <input class="form-input feas-field" data-key="selling_costs.agent_commission_pct" type="number" step="0.1" value="{{ feas.selling_costs.agent_commission_pct }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Marketing ($)</label>
+        <input class="form-input feas-field" data-key="selling_costs.marketing" type="number" value="{{ feas.selling_costs.marketing }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Styling ($)</label>
+        <input class="form-input feas-field" data-key="selling_costs.styling" type="number" value="{{ feas.selling_costs.styling }}">
+      </div>
+    </div>
+
+    <div class="section-title mt-2" style="font-size:12px">Deal Targets</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Hold Period (months)</label>
+        <input class="form-input feas-field" data-key="deal_parameters.default_hold_period_months" type="number" value="{{ feas.deal_parameters.default_hold_period_months }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target Profit ($)</label>
+        <input class="form-input feas-field" data-key="deal_parameters.target_profit_min" type="number" value="{{ feas.deal_parameters.target_profit_min }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target ROI (%)</label>
+        <input class="form-input feas-field" data-key="deal_parameters.target_roi_min_pct" type="number" step="0.1" value="{{ feas.deal_parameters.target_roi_min_pct }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contingency (%)</label>
+        <input class="form-input feas-field" data-key="renovation.contingency_pct" type="number" value="{{ feas.renovation.contingency_pct }}">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API Keys Status -->
+<div class="card">
+  <div class="card-header"><span class="card-title">API Keys</span></div>
+  <div class="product-row">
+    <div class="product-icon">🔑</div>
+    <div class="product-info">
+      <div class="product-name">Anthropic (Claude)</div>
+      <div class="product-desc">CMA reasoning, feasibility, reno planner</div>
+    </div>
+    <div class="product-actions">
+      {% if anthropic_ok %}<span class="badge badge-success">Connected</span>{% else %}<span class="badge badge-warning">Not set</span>{% endif %}
+    </div>
+  </div>
+  <div class="product-row">
+    <div class="product-icon">🔑</div>
+    <div class="product-info">
+      <div class="product-name">Gemini</div>
+      <div class="product-desc">Vision / photo extraction</div>
+    </div>
+    <div class="product-actions">
+      {% if gemini_ok %}<span class="badge badge-success">Connected</span>{% else %}<span class="badge badge-warning">Not set</span>{% endif %}
+    </div>
+  </div>
+  <div class="product-row">
+    <div class="product-icon">🔑</div>
+    <div class="product-info">
+      <div class="product-name">Manus</div>
+      <div class="product-desc">DD agent tasks</div>
+    </div>
+    <div class="product-actions">
+      {% if manus_ok %}<span class="badge badge-success">Connected</span>{% else %}<span class="badge badge-default">Optional</span>{% endif %}
+    </div>
+  </div>
+  <div style="padding:12px 20px; font-size:12px; color:var(--text-tertiary); border-top:1px solid var(--gray-100)">
+    API keys are stored in your local <code>.env</code> file. They never leave your machine.
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let pendingFile = null;
+let pendingBytes = null;
+
+function handleTemplateDrop(event) {
+  event.preventDefault();
+  event.currentTarget.classList.remove('dragover');
+  const file = event.dataTransfer.files[0];
+  if (file) uploadTemplate(file);
+}
+
+async function uploadTemplate(file) {
+  if (!file) return;
+  pendingFile = file;
+
+  // Read file and detect type
+  const formData = new FormData();
+  formData.append('file', file);
+
+  showLoading('Analysing spreadsheet...');
+  try {
+    const resp = await fetch('/api/templates/detect', { method: 'POST', body: formData });
+    const result = await resp.json();
+
+    document.getElementById('templateType').value = result.type;
+    document.getElementById('detectResult').innerHTML =
+      `Detected: <strong>${result.type_label}</strong> — ${result.row_count} rows, ${result.col_count} columns. ` +
+      `<span class="text-secondary">Columns: ${result.columns.join(', ')}</span>`;
+
+    // Show/hide deal selector for comps
+    document.getElementById('compsDealGroup').classList.toggle('hidden', result.type !== 'comps');
+
+    // Show preview
+    if (result.preview_html) {
+      document.getElementById('previewTable').innerHTML = result.preview_html;
+    }
+
+    document.getElementById('previewArea').classList.remove('hidden');
+    toast('Spreadsheet analysed');
+  } catch (e) {
+    toast('Analysis failed: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+async function confirmConvert() {
+  if (!pendingFile) return;
+  const type = document.getElementById('templateType').value;
+  const dealId = document.getElementById('compsDealSelect')?.value || '';
+
+  const formData = new FormData();
+  formData.append('file', pendingFile);
+  formData.append('type', type);
+  formData.append('deal_id', dealId);
+
+  showLoading('Converting and saving...');
+  try {
+    const resp = await fetch('/api/templates/convert', { method: 'POST', body: formData });
+    const result = await resp.json();
+
+    if (result.error) {
+      toast(result.error, 'error');
+      return;
+    }
+
+    toast(result.message);
+    setTimeout(() => window.location.reload(), 1000);
+  } catch (e) {
+    toast('Conversion failed: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+function cancelUpload() {
+  pendingFile = null;
+  document.getElementById('previewArea').classList.add('hidden');
+}
+
+async function saveFeasibilityDefaults() {
+  const fields = document.querySelectorAll('.feas-field');
+  const data = {};
+
+  fields.forEach(f => {
+    const key = f.dataset.key;
+    const parts = key.split('.');
+    if (!data[parts[0]]) data[parts[0]] = {};
+    const val = f.type === 'number' ? parseFloat(f.value) : f.value;
+    data[parts[0]][parts[1]] = val;
+  });
+
+  showLoading('Saving...');
+  try {
+    const resp = await fetch('/api/templates/feasibility', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const result = await resp.json();
+    toast('Feasibility defaults saved');
+  } catch (e) {
+    toast('Save failed: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+</script>
+{% endblock %}

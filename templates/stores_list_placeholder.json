@@ -1,0 +1,48 @@
+{
+  "_note": "PLACEHOLDER — Add your preferred stores/suppliers for renovation products.",
+  "_instructions": "List stores by category. The reno planner will reference these when generating product procurement plans.",
+  "stores": [
+    {
+      "category": "General Hardware",
+      "name": "Bunnings Warehouse",
+      "notes": "Default for general supplies, paint, basic fixtures",
+      "website": "https://www.bunnings.com.au"
+    },
+    {
+      "category": "Tiles",
+      "name": "TBA — Add your preferred tile supplier",
+      "notes": "",
+      "website": ""
+    },
+    {
+      "category": "Kitchen / Joinery",
+      "name": "TBA — Add your preferred kitchen supplier",
+      "notes": "",
+      "website": ""
+    },
+    {
+      "category": "Bathroom",
+      "name": "TBA — Add your preferred bathroom supplier",
+      "notes": "",
+      "website": ""
+    },
+    {
+      "category": "Flooring",
+      "name": "TBA — Add your preferred flooring supplier",
+      "notes": "",
+      "website": ""
+    },
+    {
+      "category": "Lighting / Electrical",
+      "name": "TBA — Add your preferred lighting supplier",
+      "notes": "",
+      "website": ""
+    },
+    {
+      "category": "Appliances",
+      "name": "TBA — Add your preferred appliance supplier",
+      "notes": "",
+      "website": ""
+    }
+  ]
+}

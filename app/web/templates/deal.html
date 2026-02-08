@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block page_title %}{{ deal.address }} — Property Ops{% endblock %}
+{% block title %}{{ deal.address }}{% endblock %}
+{% block actions %}
+  <a href="/deals/{{ deal.id }}/cma" class="btn btn-primary btn-sm">Run CMA</a>
+{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+  <a href="/">Deals</a> <span class="sep">›</span> {{ deal.address }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="section">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Deal Information</span>
+      <span class="badge badge-dark">{{ deal.status|default('active') }}</span>
+    </div>
+    <div class="card-body">
+      <ul class="kv-list">
+        <li class="kv-item"><span class="kv-key">Address</span><span class="kv-val">{{ deal.address }}</span></li>
+        <li class="kv-item"><span class="kv-key">Listing URL</span><span class="kv-val">{% if deal.listing_url %}<a href="{{ deal.listing_url }}" target="_blank" style="color:#2563eb">{{ deal.listing_url[:60] }}…</a>{% else %}—{% endif %}</span></li>
+        <li class="kv-item"><span class="kv-key">Created</span><span class="kv-val">{{ deal.created_at[:16] }}</span></li>
+        <li class="kv-item"><span class="kv-key">Notes</span><span class="kv-val">{{ deal.notes or '—' }}</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Photos Section -->
+<div class="section">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Listing Photos ({{ photos|length }})</span>
+    </div>
+    <div class="card-body">
+      <div class="dropzone" id="photoDropzone" onclick="document.getElementById('photoInput').click()"
+           ondragover="event.preventDefault(); this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="handlePhotoDrop(event, '{{ deal.id }}')">
+        <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div class="dropzone-text"><strong>Click to upload</strong> or drag and drop</div>
+        <div class="dropzone-hint">JPG, PNG, WebP — listing photos for Gemini analysis</div>
+        <input type="file" id="photoInput" multiple accept="image/*" style="display:none" onchange="uploadPhotos(this.files, '{{ deal.id }}')">
+      </div>
+      {% if photos|length > 0 %}
+      <div class="photo-grid">
+        {% for p in photos %}
+        <div class="photo-thumb">
+          <img src="/api/deals/{{ deal.id }}/photos/{{ p }}" alt="Photo">
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Products -->
+<div class="section">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Products</span>
+    </div>
+    <div class="product-row">
+      <div class="product-icon">📊</div>
+      <div class="product-info">
+        <div class="product-name">CMA Engine</div>
+        <div class="product-desc">Comparative Market Analysis — comps, value range, confidence</div>
+      </div>
+      <div class="product-actions">
+        {% if deal.cma_status %}
+          <span class="badge {% if deal.cma_status == 'approved' %}badge-success{% else %}badge-warning{% endif %}">{{ deal.cma_status }}</span>
+          <a href="/deals/{{ deal.id }}/cma" class="btn btn-secondary btn-sm">View</a>
+        {% else %}
+          <a href="/deals/{{ deal.id }}/cma" class="btn btn-primary btn-sm">Start</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="product-row">
+      <div class="product-icon">✅</div>
+      <div class="product-info">
+        <div class="product-name">Due Diligence</div>
+        <div class="product-desc">Checklist-driven DD with Manus agent assistance</div>
+      </div>
+      <div class="product-actions">
+        {% if deal.dd_status %}
+          <span class="badge {% if deal.dd_status == 'approved' %}badge-success{% else %}badge-warning{% endif %}">{{ deal.dd_status }}</span>
+        {% endif %}
+        <a href="/deals/{{ deal.id }}/dd" class="btn btn-secondary btn-sm">Open</a>
+      </div>
+    </div>
+    <div class="product-row">
+      <div class="product-icon">💰</div>
+      <div class="product-info">
+        <div class="product-name">Feasibility Engine</div>
+        <div class="product-desc">Purchase viability + reno economics + max purchase price</div>
+      </div>
+      <div class="product-actions">
+        {% if deal.feasibility_status %}
+          <span class="badge {% if deal.feasibility_status == 'approved' %}badge-success{% else %}badge-warning{% endif %}">{{ deal.feasibility_status }}</span>
+          <a href="/deals/{{ deal.id }}/feasibility" class="btn btn-secondary btn-sm">View</a>
+        {% else %}
+          <a href="/deals/{{ deal.id }}/feasibility" class="btn btn-{% if deal.cma_status %}primary{% else %}secondary{% endif %} btn-sm">{% if deal.cma_status %}Start{% else %}Needs CMA{% endif %}</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="product-row">
+      <div class="product-icon">🔨</div>
+      <div class="product-info">
+        <div class="product-name">Reno Planner</div>
+        <div class="product-desc">Room interview → products → tradies → timeline</div>
+      </div>
+      <div class="product-actions">
+        {% if deal.reno_status %}
+          <span class="badge {% if deal.reno_status == 'approved' %}badge-success{% else %}badge-warning{% endif %}">{{ deal.reno_status }}</span>
+        {% endif %}
+        <a href="/deals/{{ deal.id }}/reno" class="btn btn-secondary btn-sm">Open</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Outputs -->
+{% if outputs|length > 0 %}
+<div class="section">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Output Files</span>
+    </div>
+    {% for f in outputs %}
+    <div class="product-row">
+      <div class="product-icon" style="font-size:14px">
+        {% if f.endswith('.xlsx') %}📗{% elif f.endswith('.json') %}📄{% elif f.endswith('.md') %}📝{% else %}📎{% endif %}
+      </div>
+      <div class="product-info">
+        <div class="product-name">{{ f }}</div>
+      </div>
+      <div class="product-actions">
+        <a href="/api/deals/{{ deal.id }}/outputs/{{ f }}" class="btn btn-secondary btn-sm" download>Download</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

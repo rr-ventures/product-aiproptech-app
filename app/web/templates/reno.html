@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block page_title %}Reno Planner — {{ deal.address }} — Property Ops{% endblock %}
+{% block title %}Reno Planner{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+  <a href="/">Deals</a> <span class="sep">›</span> <a href="/deals/{{ deal.id }}">{{ deal.address }}</a> <span class="sep">›</span> Reno Planner
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="alert alert-info">
+  <strong>How it works:</strong> Claude interviews you room-by-room to define the renovation scope, then generates trade plans, product lists, quote templates, and a timeline.
+</div>
+
+{% if stores_warning %}
+<div class="alert alert-warning">
+  Your stores list has placeholders. Edit <code>templates/stores_list_placeholder.json</code> to add your preferred suppliers.
+</div>
+{% endif %}
+
+<!-- Chat Interface -->
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title">Room-by-Room Interview</span>
+    <span class="badge badge-info">Interactive</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    <div id="chatMessages" style="max-height:500px; overflow-y:auto; padding:20px">
+      <div class="empty-state" id="chatEmpty">
+        <div class="empty-title">Start the interview</div>
+        <div class="empty-desc">Click the button below to begin the room-by-room renovation scoping interview with Claude.</div>
+      </div>
+    </div>
+    <div style="padding:12px 20px; border-top:1px solid var(--gray-100); display:flex; gap:8px">
+      <input class="form-input" id="chatInput" placeholder="Type your response..." onkeydown="if(event.key==='Enter')sendChat('{{ deal.id }}')" disabled>
+      <button class="btn btn-primary" id="chatSendBtn" onclick="sendChat('{{ deal.id }}')" disabled>Send</button>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" id="startInterviewBtn" onclick="startInterview('{{ deal.id }}')">Start Interview</button>
+    <button class="btn btn-secondary hidden" id="finishInterviewBtn" onclick="finishInterview('{{ deal.id }}')">Finish & Generate Plan</button>
+  </div>
+</div>
+
+<!-- Generated Outputs (shown after completion) -->
+<div id="renoOutputs" class="hidden">
+  <div class="section-title">Generated Artifacts</div>
+  <div class="card">
+    <div class="product-row">
+      <div class="product-icon">📋</div>
+      <div class="product-info"><div class="product-name">Product List</div><div class="product-desc">Procurement plan with budget, stores, timing</div></div>
+      <div class="product-actions"><a href="/api/deals/{{ deal.id }}/outputs/product_list.xlsx" class="btn btn-secondary btn-sm" download>Download</a></div>
+    </div>
+    <div class="product-row">
+      <div class="product-icon">📊</div>
+      <div class="product-info"><div class="product-name">Quote Tracker</div><div class="product-desc">Tradie quote tracking spreadsheet</div></div>
+      <div class="product-actions"><a href="/api/deals/{{ deal.id }}/outputs/quote_tracker.xlsx" class="btn btn-secondary btn-sm" download>Download</a></div>
+    </div>
+    <div class="product-row">
+      <div class="product-icon">📅</div>
+      <div class="product-info"><div class="product-name">Timeline</div><div class="product-desc">Phased renovation schedule</div></div>
+      <div class="product-actions"><a href="/api/deals/{{ deal.id }}/outputs/timeline.xlsx" class="btn btn-secondary btn-sm" download>Download</a></div>
+    </div>
+    <div class="product-row">
+      <div class="product-icon">📝</div>
+      <div class="product-info"><div class="product-name">Trade Scope Docs</div><div class="product-desc">Per-trade scope documents + quote email templates</div></div>
+      <div class="product-actions"><a href="/api/deals/{{ deal.id }}/outputs/reno_plan.json" class="btn btn-secondary btn-sm" download>Download JSON</a></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
